@@ -25,9 +25,3 @@ void UpdateGravity(Player *P,float dt)
     P->onground = false;
     // y movement ends
 }
-
-void UpdateBullGravity(Bull *B, float dt)
-{
-    B->velocityY += B->gravity * dt;
-    B->y += B->velocityY * dt;
-}

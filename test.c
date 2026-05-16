@@ -44,29 +44,16 @@ int main(void)
         0.0f,   // cooldown
         0.0f,   // knockbackduration
         true,   // alive
-        false ,
+        false,
         0,
-        0  // spiritcollision
+        0 // spiritcollision
     };
-Bull bn = {
-    1000.0f,  // x
-    1800.0f,  // y
-    100.0f,   // speed
-    2000.0f,  // accelaration
-    3500.0f,  // deccelaration
-    500.0f,   // health
-    20.0f,    // damage
-    1,        // direction
-    15000.0f, // gravity
-    0.0f,     // velocityY
-    1.0f,     // turntimer
-    0.0f,     // hittimer
-    0.0f,     // knockbacktimer
-    1,        // knockbackdirection
-    1,        // collisiondirection
-    Idle,     // state
-    true      // alive
-};
+    Bull bulls[3] = {
+        {1000.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 500.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
+        {500.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 500.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
+        {1500.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 500.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
+    };
+    int bullCount = 3;
     float timer = 1;
 
     InitWindow(1440, 1080, "Title:The Name");
@@ -99,13 +86,20 @@ Bull bn = {
 
         AttackCheck = UpdateAttack(&P, dt, &AttackRect);
 
-        BullCollisionX(&bn);
+        for (int i = 0; i < bullCount; i++)
+        {
+            BullCollisionX(&bulls[i]);
 
-        UpdateBullGravity(&bn, dt);
+            UpdateBullGravity(&bulls[i], dt);
+    
+            BullCollisionY(&bulls[i]);
+    
+            BullUpdateLogic(&bulls[i], &P, dt, AttackCheck, &AttackRect);
 
-        BullCollisionY(&bn);
+            CollisionX(&P);
+        }
+        
 
-        BullUpdateLogic(&bn, &P, dt,AttackCheck, &AttackRect);
 
         spiritupdate(&en, &P, dt);
 
@@ -124,7 +118,11 @@ Bull bn = {
         BeginMode2D(camera);
 
         DrawRectangle(P.x, P.y, 100, 200, WHITE);
-        DrawRectangle(bn.x, bn.y, 200, 200, BLUE);
+        for (int i = 0; i < bullCount; i++)
+        {
+            DrawRectangle(bulls[i].x, bulls[i].y, 200, 200, BLUE);
+        }
+        
         if (en.alive == true)
             DrawRectangle(en.x, en.y, 80, 80, RED);
         if (AttackCheck)
