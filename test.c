@@ -48,19 +48,25 @@ int main(void)
         0,
         0  // spiritcollision
     };
-    Bull bn = {
-        1000.f,
-        1800.0f,
-        100.0f,
-        2000.0f,
-        3500.0f,
-        500.0f,
-        20.0f,
-        1,
-        15000.0f,
-        0.0f,
-        Idle,
-        true};
+Bull bn = {
+    1000.0f,  // x
+    1800.0f,  // y
+    100.0f,   // speed
+    2000.0f,  // accelaration
+    3500.0f,  // deccelaration
+    500.0f,   // health
+    20.0f,    // damage
+    1,        // direction
+    15000.0f, // gravity
+    0.0f,     // velocityY
+    1.0f,     // turntimer
+    0.0f,     // hittimer
+    0.0f,     // knockbacktimer
+    1,        // knockbackdirection
+    1,        // collisiondirection
+    Idle,     // state
+    true      // alive
+};
     float timer = 1;
 
     InitWindow(1440, 1080, "Title:The Name");
@@ -99,7 +105,7 @@ int main(void)
 
         BullCollisionY(&bn);
 
-        BullUpdateLogic(&bn, &P, dt, &timer, &bullhitimer, &hitstate, AttackCheck, &AttackRect);
+        BullUpdateLogic(&bn, &P, dt,AttackCheck, &AttackRect);
 
         spiritupdate(&en, &P, dt);
 
