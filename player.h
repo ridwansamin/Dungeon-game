@@ -1,7 +1,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include<raylib.h>
+#include <raylib.h>
 
 typedef struct
 {
@@ -18,6 +18,10 @@ typedef struct
     float damage;
     float attackcooldown;
 
+    float health;
+    float maxHealth;
+    float iframes;
+
     bool onground;
     bool doublejump;
     bool dashing;
@@ -28,7 +32,7 @@ void UpdateDash(Player *P, float dt);
 void UpdateMovementX(Player *P, float dt);
 void UpdateJump(Player *P, float dt);
 void CollisionX(Player *P);
-void UpdateGravity(Player *P,float dt);
+void UpdateGravity(Player *P, float dt);
 void CollisionY(Player *P);
-int UpdateAttack(Player *P,float dt,Rectangle *AttackRect);
+int UpdateAttack(Player *P, float dt, Rectangle *AttackRect);
 #endif

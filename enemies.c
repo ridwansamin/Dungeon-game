@@ -44,8 +44,9 @@ void spiritupdate(Spirit *en, Player *P, float dt)
         if (en->cooldown <= 0)
         {
             en->knockbackduration = 0.3f;
-            if (fabsf(P->x - en->x) < 500)
+            if (fabsf(P->x - en->x) < 500 && fabsf(P->y -en->y)<500)
             {
+                P->health-=en->damage;
                 en->knockdir  = (P->x > en->x) ? 1 : -1;
                 en->knockdirY = (P->y + 100 < en->y + 25) ? -1 : 1;
             }
@@ -70,6 +71,8 @@ void spiritupdate(Spirit *en, Player *P, float dt)
 
 void BullCollisionX(Bull *B)
 {
+    if(B->alive==false)
+        return 0;
     int tileX = (int)(B->x / TILE_SIZE);
     int tileY = (int)(B->y / TILE_SIZE);
 
@@ -106,6 +109,8 @@ void BullCollisionX(Bull *B)
 
 void BullCollisionY(Bull *B)
 {
+    if(B->alive==false)
+        return 0;
     int tileX = (int)(B->x / TILE_SIZE);
     int tileY = (int)(B->y / TILE_SIZE);
 
@@ -140,12 +145,22 @@ void BullCollisionY(Bull *B)
 
 void UpdateBullGravity(Bull *B, float dt)
 {
+    if(B->alive==false)
+        return 0;
     B->velocityY += B->gravity * dt;
     B->y         += B->velocityY * dt;
 }
 
 void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *AttackRect)
 {
+    if(bn->health<=0)
+    {
+        bn->alive=false;
+    }
+    if(bn->alive==false)
+    {
+        return ;
+    }
     if (bn->alive == false) return;
 
     if (bn->state == Idle)
@@ -191,6 +206,7 @@ void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *
     {
         if (CheckCollisionRecs(bullrect, playerrect))
         {
+            P->health-=bn->damage;
             bn->state    = Turning;
             bn->speed    = 0;
             bn->hittimer = 0.3f;
@@ -224,6 +240,7 @@ void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *
     {
         if (CheckCollisionRecs(bullrect, *AttackRect))
         {
+            bn->health-=P->damage;
             float atkoverlapright = fabsf(AttackRect->x - (bn->x + 200));
             float atkoverlapleft  = fabsf((AttackRect->x + AttackRect->width) - bn->x);
             float minatkoverlap   = fminf(atkoverlapleft, atkoverlapright);
@@ -236,7 +253,7 @@ void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *
     }
     if (bn->knockbacktimer > 0)
     {
-        bn->x += bn->knockbackdirection * dt * 2000;
+        bn->x += bn->knockbackdirection * dt * 3500;
         P->x  -= bn->knockbackdirection * dt * 5000;
     }
     bn->knockbacktimer -= dt;

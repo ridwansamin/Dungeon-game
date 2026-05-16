@@ -18,8 +18,14 @@ int AttackCheck = 0;
 
 int main(void)
 {
-    bool hitstate = false;
-
+    typedef enum
+    {
+        Mainmenu,
+        Playing,
+        Pausemenu,
+        Gameover
+    } Gamestate;
+    Gamestate state = Mainmenu;
     Player P = {
         200.0f,   // x
         1000.0f,  // speed
@@ -30,7 +36,10 @@ int main(void)
         10000.0f, // gravity
         0.0f,     // velocityY
         15,       // damage
-        0,        // attackcooldown
+        0.0f,     // attackcooldown
+        100.f,    // health
+        100.0f,   // maxhealth
+        .5f,      // iframes
         true,     // onground
         true,     // doublejump
         false,    // dashing
@@ -49,9 +58,9 @@ int main(void)
         0 // spiritcollision
     };
     Bull bulls[3] = {
-        {1000.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 500.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
-        {500.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 500.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
-        {1500.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 500.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
+        {1000.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
+        {500.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
+        {1500.0f, 1800.0f, 100.0f, 2000.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1, 1, Idle, true},
     };
     int bullCount = 3;
     float timer = 1;
@@ -70,75 +79,102 @@ int main(void)
 
     while (!WindowShouldClose())
     {
-        float dt = GetFrameTime();
-
-        UpdateDash(&P, dt);
-
-        UpdateMovementX(&P, dt);
-
-        CollisionX(&P);
-
-        UpdateJump(&P, dt);
-
-        UpdateGravity(&P, dt);
-
-        CollisionY(&P);
-
-        AttackCheck = UpdateAttack(&P, dt, &AttackRect);
-
-        for (int i = 0; i < bullCount; i++)
+        if (state == Mainmenu)
         {
-            BullCollisionX(&bulls[i]);
+            if (IsKeyPressed(KEY_ENTER))
+                state = Playing;
+            BeginDrawing();
+            DrawText("Press enter to start", screen_w/2-500, screen_h/2, 100, RED);
+            ClearBackground(BLACK);
+            EndDrawing();
+        }
+        if (state == Playing)
+        {
+            float dt = GetFrameTime();
 
-            UpdateBullGravity(&bulls[i], dt);
-    
-            BullCollisionY(&bulls[i]);
-    
-            BullUpdateLogic(&bulls[i], &P, dt, AttackCheck, &AttackRect);
+            UpdateDash(&P, dt);
+
+            UpdateMovementX(&P, dt);
 
             CollisionX(&P);
-        }
-        
 
+            UpdateJump(&P, dt);
 
-        spiritupdate(&en, &P, dt);
+            UpdateGravity(&P, dt);
 
-        CollisionX(&P);
+            CollisionY(&P);
 
-        CollisionY(&P);
+            AttackCheck = UpdateAttack(&P, dt, &AttackRect);
 
-        // camera lerping starts
-        camera.target.x += (P.x - camera.target.x) * 6.0f * dt;
-        camera.target.y += (P.y - camera.target.y) * 6.0f * dt;
-        // camera larping ends
-
-        // drawing starts
-        BeginDrawing();
-        ClearBackground(BLACK);
-        BeginMode2D(camera);
-
-        DrawRectangle(P.x, P.y, 100, 200, WHITE);
-        for (int i = 0; i < bullCount; i++)
-        {
-            DrawRectangle(bulls[i].x, bulls[i].y, 200, 200, BLUE);
-        }
-        
-        if (en.alive == true)
-            DrawRectangle(en.x, en.y, 80, 80, RED);
-        if (AttackCheck)
-            DrawRectangleRec(AttackRect, RED);
-        for (int i = 0; i < MAP_ROWS; i++)
-        {
-            for (int j = 0; j < MAP_COLS; j++)
+            for (int i = 0; i < bullCount; i++)
             {
-                if (map[i][j] == 1)
-                    DrawRectangle((j * TILE_SIZE), (i * TILE_SIZE), TILE_SIZE, TILE_SIZE, GRAY);
-            }
-        }
+                BullCollisionX(&bulls[i]);
 
-        EndMode2D();
-        DrawText(TextFormat("Dash Cooldown: %.1f", P.dashcooldown), 20, 20, 30, WHITE);
-        EndDrawing();
+                UpdateBullGravity(&bulls[i], dt);
+
+                BullCollisionY(&bulls[i]);
+
+                BullUpdateLogic(&bulls[i], &P, dt, AttackCheck, &AttackRect);
+
+                CollisionX(&P);
+            }
+
+            spiritupdate(&en, &P, dt);
+
+            CollisionX(&P);
+
+            CollisionY(&P);
+            if (P.health <= 0)
+            {
+                state = Gameover;
+            }
+
+            // camera lerping starts
+            camera.target.x += (P.x - camera.target.x) * 6.0f * dt;
+            camera.target.y += (P.y - camera.target.y) * 6.0f * dt;
+            // camera larping ends
+
+            // drawing starts
+            BeginDrawing();
+            ClearBackground(BLACK);
+            BeginMode2D(camera);
+
+            DrawRectangle(P.x, P.y, 100, 200, WHITE);
+            for (int i = 0; i < bullCount; i++)
+            {
+                if (bulls[i].alive == true)
+                    DrawRectangle(bulls[i].x, bulls[i].y, 200, 200, BLUE);
+            }
+
+            if (en.alive == true)
+                DrawRectangle(en.x, en.y, 80, 80, RED);
+            if (AttackCheck)
+                DrawRectangleRec(AttackRect, RED);
+            for (int i = 0; i < MAP_ROWS; i++)
+            {
+                for (int j = 0; j < MAP_COLS; j++)
+                {
+                    if (map[i][j] == 1)
+                        DrawRectangle((j * TILE_SIZE), (i * TILE_SIZE), TILE_SIZE, TILE_SIZE, GRAY);
+                }
+            }
+
+            EndMode2D();
+            DrawText(TextFormat("Dash Cooldown: %.1f", P.dashcooldown), 20, 20, 30, WHITE);
+            DrawText(TextFormat("Health: %.1f", P.health), 50, 50, 30, WHITE);
+            EndDrawing();
+        }
+        if (state == Gameover)
+
+        {
+            BeginDrawing();
+            ClearBackground(BLACK);
+            DrawText("GAME OVER", screen_w / 2 - 150, screen_h / 2, 50, RED);
+            DrawText("Press ENTER to restart is not working", screen_w / 2 - 150, screen_h / 2 + 60, 30, WHITE);
+            EndDrawing();
+            if (IsKeyPressed(KEY_ENTER))
+                state = Mainmenu;
+        }
     }
 
     CloseWindow();
