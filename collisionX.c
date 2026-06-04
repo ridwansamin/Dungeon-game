@@ -13,7 +13,7 @@ void CollisionX(Player *P)
         {
             if (i < 0 || i >= MAP_ROWS || j < 0 || j >= MAP_COLS)
                 continue;
-            if (map[i][j] == 1)
+            if (maps[currentLevel][i][j] == 1)
             {
                 Rectangle tileRect = {j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE};
                 Rectangle playerRect = {P->x, P->y, 100, 200};
@@ -42,7 +42,7 @@ void CollisionY(Player *P)
         {
             if (i < 0 || i >= MAP_ROWS || j < 0 || j >= MAP_COLS)
                 continue;
-            if (map[i][j] == 1)
+            if (maps[currentLevel][i][j] == 1)
             {
                 Rectangle tileRect = {j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE};
                 Rectangle playerRect = {P->x, P->y, 100, 200};

@@ -11,6 +11,11 @@ typedef enum {
     Turning,
 } Bullstate;
 
+typedef enum {
+    MIdle,
+    MCharging,
+    MChasing
+} Mimicstate;
 typedef struct
 {
     float x;
@@ -46,11 +51,34 @@ typedef struct
     int   knockdirY;
 } Spirit;
 
+typedef struct 
+{
+    float x;
+    float y;
+    float velocityY;
+    float gravity;
+    float speed;
+    float health;
+    float damage;
+    float attacktimer;
+    float attackcooldown;
+    float jumptimer;
+    int direction;
+    Mimicstate mstate;
+    bool alive;
+    Rectangle attackrect;
+    bool onground;
+} Mimic;
+
 void BullCollisionX(Bull *B);
 void BullCollisionY(Bull *B);
 void UpdateBullGravity(Bull *B, float dt);
 void spiritupdate(Spirit *en, Player *P, float dt);
 void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *AttackRect);
+void MimicCollisionX(Mimic *M);
+void MimicCollisionY(Mimic *M);
+void UpdateMimicGravity(Mimic *M, float dt);
+void UpdateMimicLogic(Mimic *M, Player *P, float dt);
 
 #endif
 

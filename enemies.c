@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-float invincibility=0.5f;
+
 
 void spiritupdate(Spirit *en, Player *P, float dt)
 {
@@ -88,7 +88,7 @@ void BullCollisionX(Bull *B)
         {
             if (i < 0 || i >= MAP_ROWS || j < 0 || j >= MAP_COLS)
                 continue;
-            if (map[i][j] == 1)
+            if (maps[currentLevel][i][j] == 1)
             {
                 Rectangle tileRect = {j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE};
                 Rectangle bullRect = {B->x, B->y, 200, 200};
@@ -127,7 +127,7 @@ void BullCollisionY(Bull *B)
         {
             if (i < 0 || i >= MAP_ROWS || j < 0 || j >= MAP_COLS)
                 continue;
-            if (map[i][j] == 1)
+            if (maps[currentLevel][i][j] == 1)
             {
                 Rectangle tileRect = {j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE};
                 Rectangle bullRect = {B->x, B->y, 200, 200};
@@ -169,8 +169,6 @@ void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *
     {
         return;
     }
-    if (bn->alive == false)
-        return;
 
     if (bn->state == Idle)
     {

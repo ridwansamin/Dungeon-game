@@ -117,7 +117,7 @@ int main(void)
 
             UpdateJump(&P, dt);
 
-            UpdateGravity(&P, dt);
+            UpdateGravity(&P, dt); //gravity always has to be before collision y or jump wont work
 
             CollisionY(&P);
 
@@ -176,7 +176,7 @@ int main(void)
             {
                 for (int j = 0; j < MAP_COLS; j++)
                 {
-                    if (map[i][j] == 1)
+                    if (maps[currentLevel][i][j] == 1)
                         DrawRectangle((j * TILE_SIZE), (i * TILE_SIZE), TILE_SIZE, TILE_SIZE, GRAY);
                 }
             }
