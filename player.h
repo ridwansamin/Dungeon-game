@@ -3,7 +3,7 @@
 
 #include <raylib.h>
 
-float invincibility=0.5f;
+extern float invincibility;
 typedef struct
 {
     float x;

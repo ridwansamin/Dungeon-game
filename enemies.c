@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-
+float invincibility=.5f;
 
 void spiritupdate(Spirit *en, Player *P, float dt)
 {
