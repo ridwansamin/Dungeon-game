@@ -4,18 +4,28 @@
 #include <raylib.h>
 #include "player.h"
 
-typedef enum {
+#define MAX_ARROWS 30
+typedef enum
+{
     Idle,
     Charging,
     Stopping,
     Turning,
 } Bullstate;
 
-typedef enum {
+typedef enum
+{
     MIdle,
     MCharging,
     MChasing
 } Mimicstate;
+
+typedef enum
+{
+    AIdle,
+    AChasing,
+    ACharging,
+} Archerstate;
 typedef struct
 {
     float x;
@@ -25,16 +35,16 @@ typedef struct
     float deccelaration;
     float health;
     float damage;
-    int   direction;
+    int direction;
     float gravity;
     float velocityY;
     float turntimer;
     float hittimer;
     float knockbacktimer;
-    int   knockbackdirection;
-    int   collisiondirection;
+    int knockbackdirection;
+    int collisiondirection;
     Bullstate state;
-    bool  alive;
+    bool alive;
     float maxturntimer;
 } Bull;
 
@@ -46,13 +56,13 @@ typedef struct
     float damage;
     float cooldown;
     float knockbackduration;
-    bool  alive;
-    bool  spiritcollision;
-    int   knockdir;
-    int   knockdirY;
+    bool alive;
+    bool spiritcollision;
+    int knockdir;
+    int knockdirY;
 } Spirit;
 
-typedef struct 
+typedef struct
 {
     float x;
     float y;
@@ -74,6 +84,38 @@ typedef struct
     float maxspeed;
 } Mimic;
 
+typedef struct
+{
+    float x;
+    float y;
+    float velocityY;
+    float gravity;
+    float speed;
+    float health;
+    float damage;
+    float attacktimer;
+    float jumptimer;
+    int direction;
+    Archerstate Astate;
+    bool alive;
+    bool onground;
+    float playerknockbacktimer;
+    float knockbackduration;
+    float maxspeed;
+    float arrowdamage;
+    float maxattacktimer;
+} Archer;
+
+typedef struct
+{
+    float x;
+    float y;
+    float vx; 
+    float vy;
+    bool alive;
+    float timer;
+} Arrow;
+
 void BullCollisionX(Bull *B);
 void BullCollisionY(Bull *B);
 void UpdateBullGravity(Bull *B, float dt);
@@ -83,5 +125,10 @@ void MimicCollisionX(Mimic *M);
 void MimicCollisionY(Mimic *M);
 void UpdateMimicGravity(Mimic *M, float dt);
 int UpdateMimicLogic(Mimic *M, Player *P, float dt, int attackcheck, Rectangle *AttackRect);
-#endif
+void ArcherCollisionX(Archer *M);
+void ArcherCollisionY(Archer *M);
+void UpdateArcherGravity(Archer *M, float dt);
+int UpdateArcherLogic(Archer *A, Player *P, float dt, int attackcheck, Rectangle *AttackRect, Arrow *arrows, int arrowCount);
+void UpdateArrows(Arrow *arrows, int count, Player *P, float dt);
 
+#endif

@@ -37,15 +37,15 @@ int main(void)
         0.0f,     // velocityY
         15,       // damage
         0.0f,     // attackcooldown
-        100.0f,    // health
+        100.0f,   // health
         100.0f,   // maxhealth
         .5f,      // iframes
         true,     // onground
         true,     // doublejump
         false,    // dashing
         true,     // alive
-        0.0f,      // spikeknkbacktimer
-        0    // spikeknkdirection
+        0.0f,     // spikeknkbacktimer
+        0         // spikeknkdirection
     };
     Spirit en = {
         200.0f, // x
@@ -60,18 +60,26 @@ int main(void)
         0 // spiritcollision
     };
     Bull bulls[3] = {
-        {1000.0f, 1800.0f, 100.0f, 2500.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1, 1, Idle, true,1.0f},
-        {500.0f, 1800.0f, 100.0f, 1500.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1, 1, Idle, true,0.5f},
-        {1500.0f, 1800.0f, 100.0f, 4000.0f, 3500.0f, 90.0f, 20.0f, 1, 25000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1, 1, Idle, true,1.5f},
+        {1000.0f, 1800.0f, 100.0f, 2500.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1, 1, Idle, true, 1.0f},
+        {500.0f, 1800.0f, 100.0f, 1500.0f, 3500.0f, 90.0f, 20.0f, 1, 15000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1, 1, Idle, true, 0.5f},
+        {1500.0f, 1800.0f, 100.0f, 4000.0f, 3500.0f, 90.0f, 20.0f, 1, 25000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1, 1, Idle, true, 1.5f},
     };
     Mimic mimics[3] = {
         {600.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 100.0f, 15.0f, 0.0f, 1.0f, 0.0f, 1, MIdle, true, {0}, false, 0.0f, 0.0f, 1700.0f}, // add amx speed at the end
         {900.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 100.0f, 15.0f, 0.0f, 1.0f, 0.0f, -1, MIdle, true, {0}, false, 0.0f, 0.0f, 800.0f},
         {1200.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 100.0f, 15.0f, 0.0f, 1.0f, 0.0f, 1, MIdle, true, {0}, false, 0.0f, 0.0f, 1200.0f},
     };
+    Archer archers[3] = {
+        // x       y       velY  grav      spd  hp    dmg  atktimer jmptimer  dir  state  alive  onground  pKBtimer  KBdur  maxspd  arrowdmg
+        {300.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f,1.0f},
+        {800.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, -1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f,1.5f},
+        {1400.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f,.5f},
+    };
+    int archerCount = 3;
+    Arrow arrows[MAX_ARROWS] = {0}; // zero-init means all alive=false
     int mimicCount = 0;
     int mimicattaks[mimicCount];
-    int bullCount = 3; ////edited 0 for testing
+    int bullCount = 0; ////edited 0 for testing
 
     // float timer = 1; dont know what i used this for
 
@@ -87,7 +95,7 @@ int main(void)
     Camera2D camera = {0};
     camera.target = (Vector2){P.x, P.y};                        // what it looks at
     camera.offset = (Vector2){screen_w / 2 - 50, screen_h / 2}; // where on screen
-    camera.zoom = 0.6f;
+    camera.zoom = 0.7f;
 
     while (!WindowShouldClose())
     {
@@ -123,7 +131,7 @@ int main(void)
 
             UpdateMovementX(&P, dt);
 
-            CollisionX(&P,dt);
+            CollisionX(&P, dt);
 
             UpdateJump(&P, dt);
 
@@ -143,7 +151,7 @@ int main(void)
 
                 BullUpdateLogic(&bulls[i], &P, dt, AttackCheck, &AttackRect);
 
-                CollisionX(&P,dt);
+                CollisionX(&P, dt);
             }
 
             for (int i = 0; i < mimicCount; i++)
@@ -154,9 +162,19 @@ int main(void)
                 mimicattaks[i] = UpdateMimicLogic(&mimics[i], &P, dt, AttackCheck, &AttackRect);
             }
 
+            for (int i = 0; i < archerCount; i++)
+            {
+                ArcherCollisionX(&archers[i]);
+                UpdateArcherGravity(&archers[i], dt);
+                ArcherCollisionY(&archers[i]);
+                UpdateArcherLogic(&archers[i], &P, dt, AttackCheck, &AttackRect, arrows, MAX_ARROWS);
+            }
+
+            UpdateArrows(arrows, MAX_ARROWS, &P, dt);
+
             spiritupdate(&en, &P, dt);
 
-            CollisionX(&P,dt);
+            CollisionX(&P, dt);
 
             CollisionY(&P);
             if (P.health <= 0)
@@ -209,6 +227,16 @@ int main(void)
                         DrawRectangleRec(mimics[i].attackrect, YELLOW);
                 }
             }
+            for (int i = 0; i < archerCount; i++)
+            {
+                if (archers[i].alive)
+                    DrawRectangle(archers[i].x, archers[i].y, 100, 200, PURPLE);
+            }
+            for (int i = 0; i < MAX_ARROWS; i++)
+            {
+                if (arrows[i].alive)
+                    DrawCircle(arrows[i].x, arrows[i].y, 20, YELLOW);
+            }
             EndMode2D();
             DrawText(TextFormat("Dash Cooldown: %.1f", P.dashcooldown), 20, 40, 30, WHITE);
             DrawRectangle(20, 20, 200, 20, DARKGRAY);                       // health bar background grey
@@ -253,6 +281,15 @@ int main(void)
                     bulls[i].state = Idle;
                     bulls[i].speed = 100.0f;
                 }
+                for (int i = 0; i < archerCount; i++)
+                {
+                    archers[i].alive = true;
+                    archers[i].health = 80.0f;
+                    archers[i].Astate = AIdle;
+                    archers[i].attacktimer = 2.0f;
+                }
+                for (int i = 0; i < MAX_ARROWS; i++)
+                    arrows[i].alive = false;
             }
             BeginDrawing();
             ClearBackground(BLACK);
