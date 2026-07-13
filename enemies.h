@@ -26,6 +26,14 @@ typedef enum
     AChasing,
     ACharging,
 } Archerstate;
+
+typedef enum 
+{
+    Didle,
+    Dchasing,
+    Dcharging,
+    Dattacking,
+}Dragonstate;
 typedef struct
 {
     float x;
@@ -116,6 +124,30 @@ typedef struct
     float timer;
 } Arrow;
 
+typedef struct 
+{
+    float x;
+    float y;
+    float health;
+    float damage;
+    float chargetimer;
+    float maxchargetimer;
+    float attacktimer;
+    float maxattacktimer;
+    bool alive;
+    int direction;
+    Dragonstate dstate;
+    Rectangle firerect;
+    float knockbackduration;
+    float playerknockbacktimer;
+    float playerecoil;
+    int recoildirection;
+    float speed;
+    float attackspeed;
+    float wallDropSpeed;
+}Dragon;
+
+
 void BullCollisionX(Bull *B);
 void BullCollisionY(Bull *B);
 void UpdateBullGravity(Bull *B, float dt);
@@ -130,5 +162,7 @@ void ArcherCollisionY(Archer *M);
 void UpdateArcherGravity(Archer *M, float dt);
 int UpdateArcherLogic(Archer *A, Player *P, float dt, int attackcheck, Rectangle *AttackRect, Arrow *arrows, int arrowCount);
 void UpdateArrows(Arrow *arrows, int count, Player *P, float dt);
-
+void UpdateDragon(Dragon *D, Player *P, float dt, int attackcheck, Rectangle *attackrect);
+void DragonCollisionX(Dragon *D, float dt);
+void DragonCollisionY(Dragon *D);
 #endif

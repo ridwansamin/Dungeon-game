@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-float invincibility=.2f;
+float invincibility = .2f;
 
 void spiritupdate(Spirit *en, Player *P, float dt)
 {
@@ -78,7 +78,7 @@ void spiritupdate(Spirit *en, Player *P, float dt)
 void BullCollisionX(Bull *B)
 {
     if (B->alive == false)
-        return ;
+        return;
     int tileX = (int)(B->x / TILE_SIZE);
     int tileY = (int)(B->y / TILE_SIZE);
 
@@ -117,7 +117,7 @@ void BullCollisionX(Bull *B)
 void BullCollisionY(Bull *B)
 {
     if (B->alive == false)
-        return ;
+        return;
     int tileX = (int)(B->x / TILE_SIZE);
     int tileY = (int)(B->y / TILE_SIZE);
 
@@ -154,7 +154,7 @@ void BullCollisionY(Bull *B)
 void UpdateBullGravity(Bull *B, float dt)
 {
     if (B->alive == false)
-        return ;
+        return;
     B->velocityY += B->gravity * dt;
     B->y += B->velocityY * dt;
 }
@@ -213,7 +213,7 @@ void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *
     {
         if (CheckCollisionRecs(bullrect, playerrect))
         {
-            P->doublejump=true;
+            P->doublejump = true;
             if (P->iframes <= 0)
             {
                 P->health -= bn->damage;
@@ -281,4 +281,265 @@ void BullUpdateLogic(Bull *bn, Player *P, float dt, int AttackCheck, Rectangle *
     bn->knockbacktimer -= dt;
     if (bn->knockbacktimer < 0)
         bn->knockbacktimer = 0;
+}
+
+void UpdateDragon(Dragon *D, Player *P, float dt, int attackcheck, Rectangle *attackrect)
+{
+    if (D->health <= 0)
+        D->alive = false;
+    if (D->alive == false)
+        return;
+    Rectangle dragonrect = {D->x, D->y, 300, 200};
+    Rectangle playerrect = {P->x, P->y, 100, 200};
+    if (P->dashing == false)
+    {
+        if (CheckCollisionRecs(dragonrect, playerrect))
+        {
+            if (P->iframes <= 0)
+            {
+                P->health -= D->damage;
+                P->iframes = invincibility;
+            }
+            P->doublejump = true;
+
+            float overlapright = fabsf(P->x - (D->x + 300));
+            float overlapleft = fabsf(D->x - (P->x + 100));
+            float overlaptop = fabsf((P->y + 200) - D->y);
+            float overlapbottom = fabsf((D->y + 200) - P->y);
+
+            float minOverlap = fminf(fminf(overlapleft, overlapright), fminf(overlaptop, overlapbottom));
+
+            if (minOverlap == overlapleft)
+            {
+                D->x = P->x + 100;
+                P->x -= 50;
+            }
+            if (minOverlap == overlapright)
+            {
+                D->x = P->x - 300;
+                P->x += 50;
+            }
+            if (minOverlap == overlaptop)
+                P->velocityY = -800.0f;
+            if (minOverlap == overlapbottom)
+                P->velocityY = 800.0f;
+        }
+    }
+    if (D->dstate != Dcharging && D->dstate != Dattacking)
+    {
+        float heightAbove = P->y - D->y;
+
+        if (heightAbove > 0 && heightAbove <= 500 && fabs(D->x - P->x) <= 50)
+        {
+            D->dstate = Dcharging;
+            D->chargetimer = D->maxchargetimer;
+        }
+        else if (fabs(P->x - D->x) < 100 * TILE_SIZE && fabs(P->y - D->y) < 30 * TILE_SIZE)
+            D->dstate = Dchasing;
+        else
+            D->dstate = Didle;
+    }
+
+    if (D->dstate == Dchasing)
+    {
+        float dx = P->x - D->x;
+        float dy = P->y - D->y - 500;
+        float dist = sqrtf(dx * dx + dy * dy);
+
+        if (dist > 1.0f)
+        {
+            D->x += (dx / dist) * D->speed * dt;
+            D->y += (dy / dist) * D->speed * dt;
+        }
+    }
+    if (D->dstate == Dcharging)
+    {
+        D->chargetimer -= dt;
+        if (D->chargetimer <= 0)
+        {
+            D->dstate = Dattacking;
+            D->attacktimer = D->maxattacktimer;
+        }
+    }
+    if (D->dstate == Dattacking)
+    {
+        D->attacktimer -= dt;
+        if (D->attacktimer <= 0)
+            D->dstate = Didle;
+
+        int direction = 0;
+        if (D->x > P->x)
+            direction = -1;
+        else
+            direction = 1;
+        D->direction = direction;
+
+        // ramp from chase speed up to full attack speed over 0.25s
+        float rampTime = 0.25f;
+        float elapsed = D->maxattacktimer - D->attacktimer;
+        float t;
+        if (elapsed < rampTime)
+        {
+            t = elapsed / rampTime;
+        }
+        else
+        {
+            t = 1.0f;
+        }
+        float currentSpeed = D->speed + (D->attackspeed - D->speed) * t;
+
+        D->x += direction * currentSpeed * dt;
+
+        D->firerect.x = D->x;
+        D->firerect.y = D->y + 200;
+        D->firerect.width = 300;
+        D->firerect.height = 1500;
+
+        if (CheckCollisionRecs(D->firerect, playerrect) && P->dashing == false)
+        {
+            if (P->iframes <= 0)
+            {
+                P->health -= D->damage;
+                P->iframes = invincibility;
+            }
+            D->playerknockbacktimer = 0.3f;
+        }
+    }
+
+    if (D->playerknockbacktimer > 0)
+    {
+        P->x += D->direction * dt * 3000;
+        D->playerknockbacktimer -= dt;
+    }
+
+    if (attackcheck)
+    {
+        if (CheckCollisionRecs(dragonrect, *attackrect))
+        {
+            D->health -= P->damage;
+            if (P->x > D->x)
+                D->recoildirection = 1;
+            else
+                D->recoildirection = -1;
+
+            D->playerecoil = 0.3f;
+        }
+    }
+    if (D->playerecoil > 0)
+    {
+        D->playerecoil -= dt;
+        P->x += 1500 * D->recoildirection * dt;
+    }
+}
+
+void DragonCollisionX(Dragon *D, float dt)
+{
+    if (D->alive == false)
+        return;
+    int tileX = (int)(D->x / TILE_SIZE);
+    int tileY = (int)(D->y / TILE_SIZE);
+
+    int hitWall = 0;
+
+    for (int i = tileY - 1; i <= tileY + 2; i++)
+    {
+        for (int j = tileX - 1; j <= tileX + 2; j++)
+        {
+            if (i < 0 || i >= MAP_ROWS || j < 0 || j >= MAP_COLS)
+                continue;
+            if (maps[currentLevel][i][j] == 1)
+            {
+                Rectangle tileRect = {j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE};
+                Rectangle dragonRect = {D->x, D->y, 300, 200};
+                if (CheckCollisionRecs(dragonRect, tileRect))
+                {
+                    float overlapLeft = (D->x + 300) - tileRect.x;
+                    float overlapRight = (tileRect.x + tileRect.width) - D->x;
+                    float overlapTop = (D->y + 200) - tileRect.y;
+                    float overlapBottom = (tileRect.y + tileRect.height) - D->y;
+
+                    float minX;
+                    if (overlapLeft < overlapRight)
+                    {
+                        minX = overlapLeft;
+                    }
+                    else
+                    {
+                        minX = overlapRight;
+                    }
+
+                    float minY;
+                    if (overlapTop < overlapBottom)
+                    {
+                        minY = overlapTop;
+                    }
+                    else
+                    {
+                        minY = overlapBottom;
+                    }
+
+                    // only resolve here if this tile is truly a side wall for the dragon
+                    // (smaller penetration on X than Y). If Y penetration is smaller,
+                    // this tile is a floor/ceiling and DragonCollisionY will handle it.
+                    if (minX < minY)
+                    {
+                        if (overlapLeft < overlapRight)
+                        {
+                            D->x = tileRect.x - 300;
+                        }
+                        else
+                        {
+                            D->x = tileRect.x + tileRect.width;
+                        }
+                        hitWall = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    if (hitWall)
+    {
+        D->wallDropSpeed += 1500 * dt;
+        D->y += D->wallDropSpeed * dt;
+    }
+    else
+    {
+        D->wallDropSpeed = 0;
+    }
+}
+void DragonCollisionY(Dragon *D)
+{
+    if (D->alive == false)
+        return;
+    int tileX = (int)(D->x / TILE_SIZE);
+    int tileY = (int)(D->y / TILE_SIZE);
+
+    for (int i = tileY - 1; i <= tileY + 2; i++)
+    {
+        for (int j = tileX - 1; j <= tileX + 2; j++)
+        {
+            if (i < 0 || i >= MAP_ROWS || j < 0 || j >= MAP_COLS)
+                continue;
+            if (maps[currentLevel][i][j] == 1)
+            {
+                Rectangle tileRect = {j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE};
+                Rectangle dragonRect = {D->x, D->y, 300, 200};
+                if (CheckCollisionRecs(dragonRect, tileRect))
+                {
+                    float overlapTop = (D->y + 200) - tileRect.y;
+                    float overlapBottom = (tileRect.y + tileRect.height) - D->y;
+                    if (overlapTop < overlapBottom)
+                    {
+                        D->y = tileRect.y - 200;
+                    }
+                    else
+                    {
+                        D->y = tileRect.y + tileRect.height;
+                    }
+                    D->wallDropSpeed = 0;
+                }
+            }
+        }
+    }
 }

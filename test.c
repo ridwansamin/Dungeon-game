@@ -27,25 +27,25 @@ int main(void)
     } Gamestate;
     Gamestate state = Mainmenu;
     Player P = {
-        200.0f,   // x
-        1000.0f,  // speed
-        0.2f,     // dashtimer
-        1,        // dashflag
-        0.0f,     // dashcooldown
-        824.0f,   // y
-        10000.0f, // gravity
-        0.0f,     // velocityY
-        15,       // damage
-        0.0f,     // attackcooldown
-        100.0f,   // health
-        100.0f,   // maxhealth
-        .5f,      // iframes
-        true,     // onground
-        true,     // doublejump
-        false,    // dashing
-        true,     // alive
-        0.0f,     // spikeknkbacktimer
-        0         // spikeknkdirection
+        200.0f,    // x
+        1000.0f,   // speed
+        0.2f,      // dashtimer
+        1,         // dashflag
+        0.0f,      // dashcooldown
+        824.0f,    // y
+        10000.0f,  // gravity
+        0.0f,      // velocityY
+        15,        // damage
+        0.0f,      // attackcooldown
+        100900.0f, // health
+        100.0f,    // maxhealth
+        .5f,       // iframes
+        true,      // onground
+        true,      // doublejump
+        false,     // dashing
+        true,      // alive
+        0.0f,      // spikeknkbacktimer
+        0          // spikeknkdirection
     };
     Spirit en = {
         200.0f, // x
@@ -71,15 +71,38 @@ int main(void)
     };
     Archer archers[3] = {
         // x       y       velY  grav      spd  hp    dmg  atktimer jmptimer  dir  state  alive  onground  pKBtimer  KBdur  maxspd  arrowdmg
-        {300.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f,1.0f},
-        {800.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, -1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f,1.5f},
-        {1400.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f,.5f},
+        {300.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f, 1.0f},
+        {800.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, -1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f, 1.5f},
+        {1400.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f, .5f},
     };
-    int archerCount = 3;
+    int archerCount = 1;
     Arrow arrows[MAX_ARROWS] = {0}; // zero-init means all alive=false
-    int mimicCount = 0;
+    int mimicCount = 1;
     int mimicattaks[mimicCount];
-    int bullCount = 0; ////edited 0 for testing
+    int bullCount = 3; ////edited 0 for testing
+
+    Dragon dragon = {
+        1500.0f, // x
+        500.0f,  // y
+        50.0f,  // health (set below)
+        30.0f,   // damage
+        0.0f,    // chargetimer
+        1.0f,    // maxchargetimer
+        0.0f,    // attacktimer
+        3.0f,    // maxattacktimer
+        true,    // alive
+        1,       // direction
+        Didle,   // dstate
+        {0},     // firerect
+        0.0f,    // knockbackduration
+        0.0f,    // playerknockbacktimer
+        0.0f,    // playerecoil
+        0,       // recoildirection
+        1000.0f,  // speed
+        500.0f,  // attackspeed
+        0.0f,    // wallDropSpeed
+    };
+    // dragon.health = 500.0f;
 
     // float timer = 1; dont know what i used this for
 
@@ -170,6 +193,10 @@ int main(void)
                 UpdateArcherLogic(&archers[i], &P, dt, AttackCheck, &AttackRect, arrows, MAX_ARROWS);
             }
 
+            DragonCollisionX(&dragon, dt);
+            DragonCollisionY(&dragon);
+            UpdateDragon(&dragon, &P, dt, AttackCheck, &AttackRect);
+
             UpdateArrows(arrows, MAX_ARROWS, &P, dt);
 
             spiritupdate(&en, &P, dt);
@@ -232,6 +259,10 @@ int main(void)
                 if (archers[i].alive)
                     DrawRectangle(archers[i].x, archers[i].y, 100, 200, PURPLE);
             }
+            if (dragon.alive)
+                DrawRectangle(dragon.x, dragon.y, 300, 200, DARKGREEN);
+            if (dragon.dstate == Dattacking && dragon.alive==true)
+                DrawRectangleRec(dragon.firerect, ORANGE);
             for (int i = 0; i < MAX_ARROWS; i++)
             {
                 if (arrows[i].alive)
@@ -290,6 +321,15 @@ int main(void)
                 }
                 for (int i = 0; i < MAX_ARROWS; i++)
                     arrows[i].alive = false;
+
+                dragon.alive = true;
+                dragon.health = 500.0f;
+                dragon.dstate = Didle;
+                dragon.x = 1500.0f;
+                dragon.y = 500.0f;
+                dragon.wallDropSpeed = 0;
+                dragon.playerknockbacktimer = 0;
+                dragon.playerecoil = 0;
             }
             BeginDrawing();
             ClearBackground(BLACK);
