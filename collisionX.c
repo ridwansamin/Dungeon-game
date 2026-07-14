@@ -2,11 +2,8 @@
 #include "tilemap.h"
 #include "enemies.h"
 
-void CollisionX(Player *P, float dt)
+void UpdateSpikeKnockback(Player *P, float dt)
 {
-    int tileX = (int)(P->x / TILE_SIZE);
-    int tileY = (int)(P->y / TILE_SIZE);
-
     if (P->spikeknkbacktimer <= 0)
     {
         P->spikeknkdirection = 0;
@@ -14,6 +11,12 @@ void CollisionX(Player *P, float dt)
     }
     P->x += P->spikeknkdirection * 1500 * dt;
     P->spikeknkbacktimer -= dt;
+}
+
+void CollisionX(Player *P)
+{
+    int tileX = (int)(P->x / TILE_SIZE);
+    int tileY = (int)(P->y / TILE_SIZE);
 
     for (int i = tileY - 1; i <= tileY + 2; i++)
     {

@@ -148,6 +148,31 @@ typedef struct
 }Dragon;
 
 
+#define MAX_HOMING_BULLETS 20
+
+typedef struct
+{
+    float x;
+    float y;
+    float health;
+    float damage;
+    float attacktimer;
+    float maxattacktimer;
+    bool alive;
+    float knockbackduration;
+} Totem;
+
+typedef struct
+{
+    float x;
+    float y;
+    float angle;
+    float speed;
+    float turnRate;
+    float damage;
+    bool alive;
+} HomingBullet;
+
 void BullCollisionX(Bull *B);
 void BullCollisionY(Bull *B);
 void UpdateBullGravity(Bull *B, float dt);
@@ -165,4 +190,6 @@ void UpdateArrows(Arrow *arrows, int count, Player *P, float dt);
 void UpdateDragon(Dragon *D, Player *P, float dt, int attackcheck, Rectangle *attackrect);
 void DragonCollisionX(Dragon *D, float dt);
 void DragonCollisionY(Dragon *D);
+void UpdateTotemLogic(Totem *T, Player *P, float dt, int attackcheck, Rectangle *AttackRect, HomingBullet *bullets, int bulletCount);
+void UpdateHomingBullets(HomingBullet *bullets, int count, Player *P, float dt,int attackcheck,Rectangle *Attackrect);
 #endif

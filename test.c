@@ -75,9 +75,17 @@ int main(void)
         {800.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, -1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f, 1.5f},
         {1400.0f, 1800.0f, 0.0f, 10000.0f, 0.0f, 80.0f, 10.0f, 2.0f, 0.0f, 1, AIdle, true, false, 0.0f, 0.0f, 400.0f, 15.0f, .5f},
     };
-    int archerCount = 1;
+    int archerCount = 0;
     Arrow arrows[MAX_ARROWS] = {0}; // zero-init means all alive=false
-    int mimicCount = 1;
+
+    Totem totems[1] = {
+        {1000.0f, 1800.0f, 60.0f, 10.0f, 5.0f, 1.5f, true, 0.0f},
+        // x       y       health damage atktimer maxatktimer alive knockbackduration
+    };
+    int totemCount = 1;
+    HomingBullet homingBullets[MAX_HOMING_BULLETS] = {0}; // zero-init means all alive=false
+
+    int mimicCount = 0;
     int mimicattaks[mimicCount];
     int bullCount = 3; ////edited 0 for testing
 
@@ -90,7 +98,7 @@ int main(void)
         1.0f,    // maxchargetimer
         0.0f,    // attacktimer
         3.0f,    // maxattacktimer
-        true,    // alive
+        false,    // alive
         1,       // direction
         Didle,   // dstate
         {0},     // firerect
@@ -150,11 +158,13 @@ int main(void)
 
             float dt = GetFrameTime();
 
+            UpdateSpikeKnockback(&P, dt);
+
             UpdateDash(&P, dt);
 
             UpdateMovementX(&P, dt);
 
-            CollisionX(&P, dt);
+            CollisionX(&P);
 
             UpdateJump(&P, dt);
 
@@ -174,7 +184,7 @@ int main(void)
 
                 BullUpdateLogic(&bulls[i], &P, dt, AttackCheck, &AttackRect);
 
-                CollisionX(&P, dt);
+                CollisionX(&P);
             }
 
             for (int i = 0; i < mimicCount; i++)
@@ -199,9 +209,14 @@ int main(void)
 
             UpdateArrows(arrows, MAX_ARROWS, &P, dt);
 
+            for (int i = 0; i < totemCount; i++)
+                UpdateTotemLogic(&totems[i], &P, dt, AttackCheck, &AttackRect, homingBullets, MAX_HOMING_BULLETS);
+
+            UpdateHomingBullets(homingBullets, MAX_HOMING_BULLETS, &P, dt,AttackCheck,&AttackRect);
+
             spiritupdate(&en, &P, dt);
 
-            CollisionX(&P, dt);
+            CollisionX(&P);
 
             CollisionY(&P);
             if (P.health <= 0)
@@ -258,6 +273,16 @@ int main(void)
             {
                 if (archers[i].alive)
                     DrawRectangle(archers[i].x, archers[i].y, 100, 200, PURPLE);
+            }
+            for (int i = 0; i < totemCount; i++)
+            {
+                if (totems[i].alive)
+                    DrawRectangle(totems[i].x, totems[i].y, 100, 150, DARKPURPLE);
+            }
+            for (int i = 0; i < MAX_HOMING_BULLETS; i++)
+            {
+                if (homingBullets[i].alive)
+                    DrawCircle(homingBullets[i].x, homingBullets[i].y, 15, PINK);
             }
             if (dragon.alive)
                 DrawRectangle(dragon.x, dragon.y, 300, 200, DARKGREEN);
@@ -330,6 +355,16 @@ int main(void)
                 dragon.wallDropSpeed = 0;
                 dragon.playerknockbacktimer = 0;
                 dragon.playerecoil = 0;
+
+                for (int i = 0; i < totemCount; i++)
+                {
+                    totems[i].alive = true;
+                    totems[i].health = 60.0f;
+                    totems[i].attacktimer = totems[i].maxattacktimer;
+                    totems[i].knockbackduration = 0;
+                }
+                for (int i = 0; i < MAX_HOMING_BULLETS; i++)
+                    homingBullets[i].alive = false;
             }
             BeginDrawing();
             ClearBackground(BLACK);

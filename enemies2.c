@@ -454,3 +454,113 @@ void UpdateArrows(Arrow *arrows, int count, Player *P, float dt)
         }
     }
 }
+void UpdateTotemLogic(Totem *T, Player *P, float dt, int attackcheck, Rectangle *AttackRect, HomingBullet *bullets, int bulletCount)
+{
+    if (T->health <= 0)
+        T->alive = false;
+    if (T->alive == false)
+        return;
+
+    Rectangle totemRect = {T->x, T->y, 100, 150};
+
+    if (attackcheck)
+    {
+        if (CheckCollisionRecs(totemRect, *AttackRect))
+        {
+            T->health -= P->damage;
+            T->knockbackduration = .01f;
+        }
+    }
+    if (T->knockbackduration > 0)
+        T->knockbackduration -= dt;
+
+    T->attacktimer -= dt;
+    if (T->attacktimer <= 0)
+    {
+        T->attacktimer = T->maxattacktimer;
+
+        for (int i = 0; i < bulletCount; i++)
+        {
+            if (!bullets[i].alive)
+            {
+                bullets[i].x = T->x + 50;
+                bullets[i].y = T->y + 75;
+                bullets[i].angle = atan2f((P->y + 100) - bullets[i].y, (P->x + 50) - bullets[i].x);
+                bullets[i].speed = 1000.0f;
+                bullets[i].turnRate = 2.5f;
+                bullets[i].damage = T->damage;
+                bullets[i].alive = true;
+                break;
+            }
+        }
+    }
+}
+
+void UpdateHomingBullets(HomingBullet *bullets, int count, Player *P, float dt, int attackcheck, Rectangle *Attackrect)
+{
+    for (int i = 0; i < count; i++)
+    {
+        if (!bullets[i].alive)
+            continue;
+
+        // steer toward the player
+        float idealAngle = atan2f((P->y + 100) - bullets[i].y, (P->x + 50) - bullets[i].x);
+        float diff = idealAngle - bullets[i].angle;
+        diff = atan2f(sinf(diff), cosf(diff)); // normalize into [-pi, pi]
+
+        float maxTurn = bullets[i].turnRate * dt;
+        if (diff > maxTurn)
+            diff = maxTurn;
+        if (diff < -maxTurn)
+            diff = -maxTurn;
+
+        bullets[i].angle += diff;
+
+        // move along the (updated) facing angle
+        float vx = cosf(bullets[i].angle) * bullets[i].speed;
+        float vy = sinf(bullets[i].angle) * bullets[i].speed;
+        bullets[i].x += vx * dt;
+        bullets[i].y += vy * dt;
+
+        // tilemap collision - vanish on hitting a solid tile
+        int tileX = (int)(bullets[i].x / TILE_SIZE);
+        int tileY = (int)(bullets[i].y / TILE_SIZE);
+        bool hitWall = false;
+
+        for (int ty = tileY - 1; ty <= tileY + 2 && !hitWall; ty++)
+        {
+            for (int tx = tileX - 1; tx <= tileX + 2 && !hitWall; tx++)
+            {
+                if (ty < 0 || ty >= MAP_ROWS || tx < 0 || tx >= MAP_COLS)
+                    continue;
+                Rectangle bulletRect = {bullets[i].x - 15, bullets[i].y - 15, 30, 30};
+                if (maps[currentLevel][ty][tx] == 1)
+                {
+                    Rectangle tileRect = {tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE};
+                    if (CheckCollisionRecs(bulletRect, tileRect))
+                        hitWall = true;
+                }
+                if (attackcheck && CheckCollisionRecs(bulletRect, *Attackrect))
+                    hitWall = true;
+            }
+        }
+        if (hitWall)
+        {
+            bullets[i].alive = false;
+            continue;
+        }
+
+        // player collision
+        Rectangle bulletRect = {bullets[i].x - 15, bullets[i].y - 15, 30, 30};
+        Rectangle playerRect = {P->x, P->y, 100, 200};
+        if (CheckCollisionRecs(bulletRect, playerRect) && P->dashing == false)
+        {
+            if (P->iframes <= 0)
+            {
+                P->health -= bullets[i].damage;
+                P->iframes = invincibility;
+            }
+            bullets[i].alive = false;
+        }
+    }
+}
