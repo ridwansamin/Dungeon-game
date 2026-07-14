@@ -115,6 +115,7 @@ int main(void)
     // float timer = 1; dont know what i used this for
 
     InitWindow(1440, 1080, "Title:The Name");
+    Texture2D spiritChase = LoadTexture("Sprite/Spirit_Chase100x100.png");
     SetExitKey(KEY_DELETE);
     HideCursor();
     ToggleFullscreen();
@@ -158,7 +159,8 @@ int main(void)
                 state = Mainmenu;
             BeginDrawing();
             ClearBackground(BLACK);
-            DrawText(TextFormat("This is a Pause menu"), screen_w / 2 - 600, screen_h / 2 - 200, 100, RED);
+            DrawText(TextFormat("Already Planning to"), screen_w / 2 - 600, screen_h / 2 - 200, 100, RED);
+            DrawText(TextFormat("       Give up?"), screen_w / 2 - 600, screen_h / 2 - 100, 100, RED);
             DrawText(TextFormat("Press esc to go to the main menu\nPress enter to continue"), screen_w / 2 - 600, screen_h / 2, 50, RED);
             EndDrawing();
         }
@@ -277,6 +279,21 @@ int main(void)
                 //     DrawRectangle(P.x, P.y, 100, 200, WHITE);
 
                 if (!P.onground)
+            // if (en.alive == true)
+            //     DrawRectangle(en.x, en.y, 80, 80, RED);
+            if (en.alive == true)
+            {
+                Rectangle src = {0, 0, spiritChase.width, spiritChase.height};// reads the entire image, region of the image
+                Rectangle dest = {en.x-20, en.y-20, 100, 100}; //hitbox size, where to draw on screen(destination)
+                Vector2 origin = {0, 0}; //pivot point of rotation
+                if (en.x > P.x) src.width = -src.width; // for mirroring/flipping
+                DrawTexturePro(spiritChase, src, dest, origin, 0.0f, WHITE);
+            }
+            if (AttackCheck)
+                DrawRectangleRec(AttackRect, RED);
+            for (int i = 0; i < MAP_ROWS; i++)
+            {
+                for (int j = 0; j < MAP_COLS; j++)
                 {
                     // If doublejump is false, it means the player has used it
                     if (!P.doublejump)
@@ -465,6 +482,8 @@ int main(void)
     UnloadTexture(texSprint2);
     UnloadTexture(texJump);
     UnloadTexture(texDJump);
+    }
+    UnloadTexture(spiritChase);
     CloseWindow();
     return 0;
 }
