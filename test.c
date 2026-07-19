@@ -147,6 +147,8 @@ int main(void)
     const float DOUBLE_JUMP_FLASH_DURATION = 0.15f; // how long the burst frame shows
     float doubleJumpParticleTimer = 0.0f;
     const float DOUBLE_JUMP_PARTICLE_DURATION = 0.3f; // total particle effect duration (all 3 frames)
+    float doubleJumpParticleX = 0.0f; // position where the double jump was triggered (fixed in world space)
+    float doubleJumpParticleY = 0.0f;
 
     // initialing the scrolling camera for the 1st frame
     Camera2D camera = {0};
@@ -219,6 +221,8 @@ int main(void)
                 {
                     doubleJumpFlashTimer = DOUBLE_JUMP_FLASH_DURATION;
                     doubleJumpParticleTimer = DOUBLE_JUMP_PARTICLE_DURATION;
+                    doubleJumpParticleX = P.x;
+                    doubleJumpParticleY = P.y;
                 }
 
                 UpdateGravity(&P, dt); // gravity always has to be before collision y or jump wont work
@@ -378,7 +382,7 @@ int main(void)
                 // Draw the selected texture
                 DrawTexturePro(currentTex, sourceRec, destRec, origin, 0.0f, playerTint);
 
-                // Draw the double-jump particle burst at the player's feet, if active
+                // Draw the double-jump particle burst at the fixed trigger position, if active
                 if (doubleJumpParticleTimer > 0.0f)
                 {
                     doubleJumpParticleTimer -= dt;
@@ -391,12 +395,12 @@ int main(void)
                         particleFrame = 0;
 
                     Texture2D particleTex = texDJumpParticles[particleFrame];
-                    float particleDrawSize = 200.0f;
+                    float particleDrawSize = 280.0f;
                     Rectangle particleSource = {0.0f, 0.0f, (float)particleTex.width, (float)particleTex.height};
-                    // Centered horizontally on the player, anchored near her feet
+                    // Centered on where the double jump was triggered, not the player's current position
                     Rectangle particleDest = {
-                        P.x + 50.0f - particleDrawSize / 2.0f,
-                        P.y + 180.0f,
+                        doubleJumpParticleX + 50.0f - particleDrawSize / 2.0f,
+                        doubleJumpParticleY,
                         particleDrawSize,
                         particleDrawSize};
                     DrawTexturePro(particleTex, particleSource, particleDest, (Vector2){0.0f, 0.0f}, 0.0f, WHITE);
