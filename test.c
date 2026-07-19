@@ -82,7 +82,7 @@ int main(void)
         {1000.0f, 1800.0f, 60.0f, 10.0f, 5.0f, 1.5f, true, 0.0f},
         // x       y       health damage atktimer maxatktimer alive knockbackduration
     };
-    int totemCount = 1;
+    int totemCount = 0;
     HomingBullet homingBullets[MAX_HOMING_BULLETS] = {0}; // zero-init means all alive=false
 
     int mimicCount = 0;
@@ -98,7 +98,7 @@ int main(void)
         1.0f,    // maxchargetimer
         0.0f,    // attacktimer
         3.0f,    // maxattacktimer
-        true,    // alive
+        false,    // alive
         1,       // direction
         Didle,   // dstate
         {0},     // firerect
@@ -134,11 +134,19 @@ int main(void)
     texJump[0] = LoadTexture("goth girl/Jump/Jump1.png"); // launch
     texJump[1] = LoadTexture("goth girl/Jump/Jump2.png"); // apex
     texJump[2] = LoadTexture("goth girl/Jump/Jump3.png"); // falling
-    Texture2D texDJump = LoadTexture("img/char_Djump.png");
+    Texture2D texDJumpBurst = LoadTexture("goth girl/Jump/DJumpBurst.png"); // one-shot flash
+    Texture2D texDJumpParticles[3];
+    texDJumpParticles[0] = LoadTexture("goth girl/Jump/DjumParticle1.png"); // burst begins
+    texDJumpParticles[1] = LoadTexture("goth girl/Jump/DjumParticle2.png"); // peak
+    texDJumpParticles[2] = LoadTexture("goth girl/Jump/DjumParticle3.png"); // fade out
 
     // --- NEW: Animation Variables ---
     float sprintAnimTimer = 0.0f;
     int currentSprintFrame = 0;
+    float doubleJumpFlashTimer = 0.0f;
+    const float DOUBLE_JUMP_FLASH_DURATION = 0.15f; // how long the burst frame shows
+    float doubleJumpParticleTimer = 0.0f;
+    const float DOUBLE_JUMP_PARTICLE_DURATION = 0.3f; // total particle effect duration (all 3 frames)
 
     // initialing the scrolling camera for the 1st frame
     Camera2D camera = {0};
@@ -205,11 +213,22 @@ int main(void)
 
                 CollisionX(&P);
 
+                bool wasDoubleJumpAvailable = P.doublejump;
                 UpdateJump(&P, dt);
+                if (wasDoubleJumpAvailable && !P.doublejump && !P.onground)
+                {
+                    doubleJumpFlashTimer = DOUBLE_JUMP_FLASH_DURATION;
+                    doubleJumpParticleTimer = DOUBLE_JUMP_PARTICLE_DURATION;
+                }
 
                 UpdateGravity(&P, dt); // gravity always has to be before collision y or jump wont work
 
                 CollisionY(&P);
+                if (P.onground)
+                {
+                    doubleJumpFlashTimer = 0.0f;
+                    doubleJumpParticleTimer = 0.0f;
+                }
 
                 AttackCheck = UpdateAttack(&P, dt, &AttackRect);
 
@@ -299,14 +318,17 @@ int main(void)
 
                 if (!P.onground)
                 {
-                    if (!P.doublejump)
+                    if (doubleJumpFlashTimer > 0.0f)
                     {
-                        currentTex = texDJump;
+                        currentTex = texDJumpBurst;
+                        doubleJumpFlashTimer -= dt;
                     }
                     else
                     {
                         // Pick jump frame from actual vertical velocity, not a timer,
                         // since jump duration varies with how high the player jumps.
+                        // Both the first jump and the double jump (after its burst
+                        // flash finishes) share this same travel animation.
                         if (P.velocityY < -800.0f)
                             currentTex = texJump[0]; // launch: still rising steeply
                         else if (P.velocityY > 800.0f)
@@ -345,7 +367,6 @@ int main(void)
                 float offsetX = (spriteDrawWidth - 100.0f) / 2.0f;
                 float offsetY = spriteDrawHeight - 200.0f;
                 Rectangle destRec = {P.x - offsetX, P.y - offsetY, spriteDrawWidth, spriteDrawHeight};
-                DrawRectangle(P.x,P.y,100,200,RED);
 
                 // Determine blinking tint for iframes
                 Color playerTint = WHITE;
@@ -356,6 +377,31 @@ int main(void)
 
                 // Draw the selected texture
                 DrawTexturePro(currentTex, sourceRec, destRec, origin, 0.0f, playerTint);
+
+                // Draw the double-jump particle burst at the player's feet, if active
+                if (doubleJumpParticleTimer > 0.0f)
+                {
+                    doubleJumpParticleTimer -= dt;
+                    float elapsed = DOUBLE_JUMP_PARTICLE_DURATION - doubleJumpParticleTimer;
+                    float progress = elapsed / DOUBLE_JUMP_PARTICLE_DURATION; // 0.0 to 1.0
+                    int particleFrame = (int)(progress * 3.0f);
+                    if (particleFrame > 2)
+                        particleFrame = 2;
+                    if (particleFrame < 0)
+                        particleFrame = 0;
+
+                    Texture2D particleTex = texDJumpParticles[particleFrame];
+                    float particleDrawSize = 200.0f;
+                    Rectangle particleSource = {0.0f, 0.0f, (float)particleTex.width, (float)particleTex.height};
+                    // Centered horizontally on the player, anchored near her feet
+                    Rectangle particleDest = {
+                        P.x + 50.0f - particleDrawSize / 2.0f,
+                        P.y + 180.0f,
+                        particleDrawSize,
+                        particleDrawSize};
+                    DrawTexturePro(particleTex, particleSource, particleDest, (Vector2){0.0f, 0.0f}, 0.0f, WHITE);
+                }
+
                 for (int i = 0; i < bullCount; i++)
                 {
                     if (bulls[i].alive == true)
@@ -497,7 +543,9 @@ int main(void)
         UnloadTexture(texSprint[i]);
     for (int i = 0; i < 3; i++)
         UnloadTexture(texJump[i]);
-    UnloadTexture(texDJump);
+    UnloadTexture(texDJumpBurst);
+    for (int i = 0; i < 3; i++)
+        UnloadTexture(texDJumpParticles[i]);
     UnloadTexture(spiritChase);
     CloseWindow();
     return 0;
