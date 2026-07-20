@@ -80,23 +80,23 @@ int UpdateAttack(Player *P, float dt, Rectangle *AttackRect)
         if (IsKeyDown(KEY_W))
         {
             AttackRect->x = P->x - 100;
-            AttackRect->y = P->y-200;
-            AttackRect->height = 200;
+            AttackRect->y = P->y-400;
+            AttackRect->height = 300;
             AttackRect->width = 300;
         }
         else if (P->dashflag == -1)
         {
-            AttackRect->x = P->x - 200;
+            AttackRect->x = P->x - 300;
             AttackRect->y = P->y;
             AttackRect->height = 200;
-            AttackRect->width = 200;
+            AttackRect->width = 300;
         }
         else if (P->dashflag == 1)
         {
             AttackRect->x = P->x + 100;
             AttackRect->y = P->y;
             AttackRect->height = 200;
-            AttackRect->width = 200;
+            AttackRect->width = 300;
         }
         return 1;
     }

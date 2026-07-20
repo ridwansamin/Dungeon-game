@@ -417,12 +417,15 @@ void UpdateDragon(Dragon *D, Player *P, float dt, int attackcheck, Rectangle *at
         if (CheckCollisionRecs(dragonrect, *attackrect))
         {
             D->health -= P->damage;
-            if (P->x > D->x)
-                D->recoildirection = 1;
-            else
-                D->recoildirection = -1;
+            if (!IsKeyDown(KEY_W))
+            {
+                if (P->x > D->x)
+                    D->recoildirection = 1;
+                else
+                    D->recoildirection = -1;
 
-            D->playerecoil = 0.3f;
+                D->playerecoil = 0.3f;
+            }
         }
     }
     if (D->playerecoil > 0)

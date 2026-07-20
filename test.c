@@ -139,13 +139,21 @@ int main(void)
     texDJumpParticles[0] = LoadTexture("goth girl/Jump/DjumParticle1.png"); // burst begins
     texDJumpParticles[1] = LoadTexture("goth girl/Jump/DjumParticle2.png"); // peak
     texDJumpParticles[2] = LoadTexture("goth girl/Jump/DjumParticle3.png"); // fade out
-    Texture2D texAttack[3];
-    texAttack[0] = LoadTexture("goth girl/attack/attackframe1.png");
-    texAttack[1] = LoadTexture("goth girl/attack/attackframe2.png");
-    texAttack[2] = LoadTexture("goth girl/attack/attackframe3.png");
+    Texture2D texAttackSide[3];
+    texAttackSide[0] = LoadTexture("goth girl/attack/attackframe1.png");
+    texAttackSide[1] = LoadTexture("goth girl/attack/attackframe2.png");
+    texAttackSide[2] = LoadTexture("goth girl/attack/attackframe3.png");
+    Texture2D texAttackUp[3];
+    texAttackUp[0] = LoadTexture("goth girl/attack/attackframe1.png");
+    texAttackUp[1] = LoadTexture("goth girl/attack/upattackframe2.png");
+    texAttackUp[2] = LoadTexture("goth girl/attack/upattackframe3.png");
     Texture2D texAttackRect[2];
     texAttackRect[0] = LoadTexture("goth girl/attack/attackrect1.png");
     texAttackRect[1] = LoadTexture("goth girl/attack/attackrect2.png");
+    Texture2D texDash[3];
+    texDash[0] = LoadTexture("goth girl/right/dash1.png"); // windup / crouch
+    texDash[1] = LoadTexture("goth girl/right/dash2.png"); // tucked burst, mid-dash
+    texDash[2] = LoadTexture("goth girl/right/dash3.png"); // full speed streak
 
     // --- NEW: Animation Variables ---
     float sprintAnimTimer = 0.0f;
@@ -156,11 +164,15 @@ int main(void)
     const float DOUBLE_JUMP_PARTICLE_DURATION = 0.3f; // total particle effect duration (all 3 frames)
     float doubleJumpParticleX = 0.0f;                 // position where the double jump was triggered (fixed in world space)
     float doubleJumpParticleY = 0.0f;
-    float attackAnimTimer = 0.0f;
     int currentAttackFrame = 0;
     bool isAttacking = false;
-    const float ATTACK_FRAME_DURATION = 0.08f;
-    int attackDirection = 1; // facing direction locked in at the moment the attack starts; used for AttackRect sprite flip only
+    float attackCooldownAtTrigger = 0.0f; // cooldown value captured the instant this swing started; drives animation progress so the sprite can never outlast or finish before the real attack cooldown
+    int attackDirection = 1;      // facing direction locked in at the moment the attack starts; used for AttackRect sprite flip only
+    bool attackIsUpAttack = false; // whether the current swing is the up-attack, locked in at the moment the attack starts
+    int currentDashFrame = 0;
+    float dashDurationAtTrigger = 0.0f; // P.dashtimer value captured the instant the dash starts; drives animation progress the same way attackCooldownAtTrigger does
+    float dashParticleX = 0.0f; // world-space launch point captured at dash start, so the burst stays put while the player rockets away from it
+    float dashParticleY = 0.0f;
 
     // initialing the scrolling camera for the 1st frame
     Camera2D camera = {0};
@@ -221,7 +233,14 @@ int main(void)
 
                 UpdateSpikeKnockback(&P, dt);
 
+                bool wasDashing = P.dashing;
                 UpdateDash(&P, dt);
+                if (!wasDashing && P.dashing)
+                {
+                    dashDurationAtTrigger = P.dashtimer; // dash just started; whatever dashtimer holds right now is the full duration it'll count down from
+                    dashParticleX = P.x;                 // fixed launch point, same idea as doubleJumpParticleX/Y
+                    dashParticleY = P.y;
+                }
 
                 UpdateMovementX(&P, dt);
 
@@ -327,7 +346,23 @@ int main(void)
                 if (AttackCheck)
                     DrawRectangleRec(AttackRect, RED);
 
-                if (!P.onground)
+                if (P.dashing)
+                {
+                    // Same progress-from-real-timer trick as the attack animation below:
+                    // derive the frame from how much of the actual dash duration has
+                    // elapsed so the sprite can't finish before or outlast the dash itself.
+                    float dashProgress = (dashDurationAtTrigger > 0.0f)
+                        ? (1.0f - (P.dashtimer / dashDurationAtTrigger))
+                        : 1.0f;
+                    currentDashFrame = (int)(dashProgress * 3.0f);
+                    if (currentDashFrame > 2)
+                        currentDashFrame = 2;
+                    if (currentDashFrame < 0)
+                        currentDashFrame = 0;
+
+                    currentTex = texDash[currentDashFrame];
+                }
+                else if (!P.onground)
                 {
                     if (doubleJumpFlashTimer > 0.0f)
                     {
@@ -362,24 +397,28 @@ int main(void)
                 if (AttackCheck)
                 {
                     isAttacking = true;
-                    currentAttackFrame = 0;
-                    attackAnimTimer = 0.0f;
-                    attackDirection = P.dashflag; // lock in facing direction for the whole swing, set only on the trigger frame
+                    attackCooldownAtTrigger = P.attackcooldown; // cooldown UpdateAttack just set for this swing (e.g. 0.25)
+                    attackDirection = P.dashflag;                // lock in facing direction for the whole swing, set only on the trigger frame
+                    attackIsUpAttack = IsKeyDown(KEY_W);         // same condition UpdateAttack used internally to build the up-attack AttackRect
                 }
                 if (isAttacking)
                 {
-                    attackAnimTimer += dt;
-                    if (attackAnimTimer >= ATTACK_FRAME_DURATION)
-                    {
-                        attackAnimTimer = 0.0f;
-                        currentAttackFrame++;
-                        if (currentAttackFrame >= 3)
-                        {
-                            currentAttackFrame = 2;
-                            isAttacking = false;
-                        }
-                    }
-                    currentTex = texAttack[currentAttackFrame];
+                    // Derive animation progress directly from how much of the real
+                    // attack cooldown has elapsed, so the sprite can never finish
+                    // before or outlast the actual cooldown used by the hitbox logic.
+                    float progress = (attackCooldownAtTrigger > 0.0f)
+                        ? (1.0f - (P.attackcooldown / attackCooldownAtTrigger))
+                        : 1.0f;
+                    currentAttackFrame = (int)(progress * 3.0f);
+                    if (currentAttackFrame > 2)
+                        currentAttackFrame = 2;
+                    if (currentAttackFrame < 0)
+                        currentAttackFrame = 0;
+
+                    if (P.attackcooldown <= 0.0f)
+                        isAttacking = false;
+
+                    currentTex = attackIsUpAttack ? texAttackUp[currentAttackFrame] : texAttackSide[currentAttackFrame];
                 }
 
                 // --- NEW: Setup rectangles for drawing and flipping ---
@@ -435,6 +474,39 @@ int main(void)
                     DrawTexturePro(particleTex, particleSource, particleDest, (Vector2){0.0f, 0.0f}, 0.0f, WHITE);
                 }
 
+                // Reuse the double-jump particle burst for the dash: same 3 frames,
+                // driven off the same progress trick as the dash sprite itself, but
+                // rotated 90 degrees counterclockwise (raylib rotation is clockwise-
+                // positive, so -90 gives CCW) and drawn bigger. Anchored at the fixed
+                // launch point captured when the dash started, same idea as the
+                // double-jump particle staying put at doubleJumpParticleX/Y.
+                if (P.dashing)
+                {
+                    float dashParticleProgress = (dashDurationAtTrigger > 0.0f)
+                        ? (1.0f - (P.dashtimer / dashDurationAtTrigger))
+                        : 1.0f;
+                    int dashParticleFrame = (int)(dashParticleProgress * 3.0f);
+                    if (dashParticleFrame > 2)
+                        dashParticleFrame = 2;
+                    if (dashParticleFrame < 0)
+                        dashParticleFrame = 0;
+
+                    Texture2D dashParticleTex = texDJumpParticles[dashParticleFrame];
+                    float dashParticleDrawSize = 280.0f * 1.5f; // larger than the double-jump version
+                    Rectangle dashParticleSource = {0.0f, 0.0f, (float)dashParticleTex.width, (float)dashParticleTex.height};
+                    // Origin at the sprite's own center so the -90 rotation pivots in place
+                    // instead of swinging around a corner.
+                    Vector2 dashParticleOrigin = {dashParticleDrawSize / 2.0f, dashParticleDrawSize / 2.0f};
+                    // dest.x/y is where that center-origin lands in world space, so this
+                    // centers the burst on the player's hitbox at the launch point.
+                    Rectangle dashParticleDest = {
+                        dashParticleX + 50.0f,
+                        dashParticleY + 100.0f,
+                        dashParticleDrawSize,
+                        dashParticleDrawSize};
+                    DrawTexturePro(dashParticleTex, dashParticleSource, dashParticleDest, dashParticleOrigin, -90.0f, WHITE);
+                }
+
                 for (int i = 0; i < bullCount; i++)
                 {
                     if (bulls[i].alive == true)
@@ -446,22 +518,61 @@ int main(void)
                 if (AttackCheck)
                 {
                     // DrawRectangleRec(AttackRect, RED); actual attack
+                    // Up-attack needs the hitbox sprite rotated 90 degrees
+                    // counterclockwise (raylib rotation is clockwise-positive,
+                    // so -90 gives CCW). Width/height are swapped before
+                    // rotating so the post-rotation footprint still matches
+                    // AttackRect's actual shape, and the rotation pivots
+                    // around AttackRect's center instead of its corner.
+                    // For the left-facing flip: negating width flips
+                    // horizontally BEFORE rotation, which becomes a vertical
+                    // flip once the -90 rotation swaps the axes. So up-attacks
+                    // flip height instead, which reads correctly as
+                    // horizontal after rotation.
                     float rectSrcWidth = (float)texAttackRect[0].width;
+                    float rectSrcHeight = (float)texAttackRect[0].height;
                     if (attackDirection == -1)
-                        rectSrcWidth = -rectSrcWidth;
-                    Rectangle src = {0, 0, rectSrcWidth, texAttackRect[0].height};
-                    Rectangle dest = {AttackRect.x, AttackRect.y, AttackRect.width, AttackRect.height};
-                    DrawTexturePro(texAttackRect[0], src, dest, (Vector2){0, 0}, 0.0f, WHITE);
+                    {
+                        if (attackIsUpAttack)
+                            rectSrcHeight = -rectSrcHeight;
+                        else
+                            rectSrcWidth = -rectSrcWidth;
+                    }
+                    Rectangle src = {0, 0, rectSrcWidth, rectSrcHeight};
+
+                    float centerX = AttackRect.x + AttackRect.width / 2.0f;
+                    float centerY = AttackRect.y + AttackRect.height / 2.0f;
+                    float rectRotation = attackIsUpAttack ? -90.0f : 0.0f;
+                    float drawWidth = attackIsUpAttack ? AttackRect.height : AttackRect.width;
+                    float drawHeight = attackIsUpAttack ? AttackRect.width : AttackRect.height;
+                    Rectangle dest = {centerX, centerY, drawWidth, drawHeight};
+                    Vector2 rectOrigin = {drawWidth / 2.0f, drawHeight / 2.0f};
+
+                    DrawTexturePro(texAttackRect[0], src, dest, rectOrigin, rectRotation, WHITE);
                 }
                 if (isAttacking && AttackCheck == 0)
                 {
                     int rectFrame = (currentAttackFrame < 2) ? 0 : 1;
                     float rectSrcWidth = (float)texAttackRect[rectFrame].width;
+                    float rectSrcHeight = (float)texAttackRect[rectFrame].height;
                     if (attackDirection == -1)
-                        rectSrcWidth = -rectSrcWidth; // flip horizontally, locked to the direction the attack started in
-                    Rectangle src = {0, 0, rectSrcWidth, texAttackRect[rectFrame].height};
-                    Rectangle dest = {AttackRect.x, AttackRect.y, AttackRect.width, AttackRect.height};
-                    DrawTexturePro(texAttackRect[rectFrame], src, dest, (Vector2){0, 0}, 0.0f, WHITE);
+                    {
+                        if (attackIsUpAttack)
+                            rectSrcHeight = -rectSrcHeight;
+                        else
+                            rectSrcWidth = -rectSrcWidth; // flip horizontally, locked to the direction the attack started in
+                    }
+                    Rectangle src = {0, 0, rectSrcWidth, rectSrcHeight};
+
+                    float centerX = AttackRect.x + AttackRect.width / 2.0f;
+                    float centerY = AttackRect.y + AttackRect.height / 2.0f;
+                    float rectRotation = attackIsUpAttack ? -90.0f : 0.0f;
+                    float drawWidth = attackIsUpAttack ? AttackRect.height : AttackRect.width;
+                    float drawHeight = attackIsUpAttack ? AttackRect.width : AttackRect.height;
+                    Rectangle dest = {centerX, centerY, drawWidth, drawHeight};
+                    Vector2 rectOrigin = {drawWidth / 2.0f, drawHeight / 2.0f};
+
+                    DrawTexturePro(texAttackRect[rectFrame], src, dest, rectOrigin, rectRotation, WHITE);
                 }
                 for (int i = 0; i < MAP_ROWS; i++)
                 {
@@ -598,9 +709,13 @@ int main(void)
         UnloadTexture(texDJumpParticles[i]);
     UnloadTexture(spiritChase);
     for (int i = 0; i < 3; i++)
-        UnloadTexture(texAttack[i]);
+        UnloadTexture(texAttackSide[i]);
+    for (int i = 0; i < 3; i++)
+        UnloadTexture(texAttackUp[i]);
     for (int i = 0; i < 2; i++)
         UnloadTexture(texAttackRect[i]);
+    for (int i = 0; i < 3; i++)
+        UnloadTexture(texDash[i]);
     CloseWindow();
     return 0;
 }
